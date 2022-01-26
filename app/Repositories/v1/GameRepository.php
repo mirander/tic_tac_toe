@@ -4,6 +4,7 @@ namespace App\Repositories\v1;
 
 use App\Entity\Game;
 use Illuminate\Support\Facades\Storage;
+use Psr\SimpleCache\InvalidArgumentException;
 
 /**
  * Class GameRepository
@@ -11,6 +12,12 @@ use Illuminate\Support\Facades\Storage;
  */
 class GameRepository
 {
+
+    /**
+     * @var Game
+     */
+    private Game $game;
+
     /**
      * @var StateRepository
      */
@@ -23,6 +30,7 @@ class GameRepository
     public function __construct(StateRepository $stateRepository)
     {
         $this->stateRepository = $stateRepository;
+        $this->game = new Game();
     }
 
     /**
@@ -33,23 +41,19 @@ class GameRepository
      */
     public function setGame($gameId, $board, $status): Game
     {
-        $model = new Game();
-        $model->setId($gameId);
-        $model->setBoard($board);
-        $model->setStatus($status);
-
-        return $model;
+        return $this->game
+            ->setId($gameId)
+            ->setBoard($board)
+            ->setStatus($status);
     }
 
-    /**
-     * @param Game $game
-     */
-    public function saveGameToFile(Game $game): void
+
+    public function saveGameToFile(): void
     {
         Storage::disk('local')
             ->put(
-                'game_' . $game->getId() . '.txt',
-                serialize($game)
+                'game_' . $this->game->getId() . '.txt',
+                serialize($this->game)
             );
     }
 
@@ -72,6 +76,7 @@ class GameRepository
     /**
      * @param $board
      * @return array
+     * @throws InvalidArgumentException
      */
     public function checkWinStatus($board): array
     {

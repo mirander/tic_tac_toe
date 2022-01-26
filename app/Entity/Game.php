@@ -32,10 +32,13 @@ class Game
 
     /**
      * @param mixed $id
+     * @return Game
      */
     public function setId($id)
     {
         $this->id = $id;
+
+        return $this;
     }
 
     /**
@@ -48,10 +51,13 @@ class Game
 
     /**
      * @param mixed $board
+     * @return Game
      */
     public function setBoard($board)
     {
         $this->board = $board;
+
+        return $this;
     }
 
     /**
@@ -64,10 +70,13 @@ class Game
 
     /**
      * @param mixed $status
+     * @return Game
      */
     public function setStatus($status)
     {
         $this->status = $status;
+
+        return $this;
     }
 
     /**

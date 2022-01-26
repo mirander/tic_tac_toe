@@ -5,6 +5,7 @@ namespace App\Services\v1;
 use App\Entity\Game;
 use App\Repositories\v1\{GameRepository, StateRepository};
 use Illuminate\Support\Str;
+use Psr\SimpleCache\InvalidArgumentException;
 
 /**
  * Class GameService
@@ -116,6 +117,7 @@ class GameService
     /**
      * @param $id
      * @return Game|null
+     * @throws InvalidArgumentException
      */
     public function winCheck($id): ?Game
     {
@@ -124,7 +126,7 @@ class GameService
             $game = $this->gameRepository->setGame($id, $board, $winCheck['gameStatus']);
 
             if ($winCheck['win']) {
-                $this->gameRepository->saveGameToFile($game);
+                $this->gameRepository->saveGameToFile();
                 $this->stateRepository->clearState();
             }
 
