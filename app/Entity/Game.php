@@ -94,7 +94,7 @@ class Game
     /**
      * @return string[][]
      */
-    public static function getWinsOptions()
+    public static function getWinsStrategy()
     {
         return [
             ['0,0', '0,1', '0,2'],

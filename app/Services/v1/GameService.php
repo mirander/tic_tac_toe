@@ -3,7 +3,8 @@
 namespace App\Services\v1;
 
 use App\Entity\Game;
-use App\Repositories\v1\{GameRepository, StateRepository};
+use App\Repositories\v1\GameRepository;
+use App\Storage\LocalStateStorage;
 use Illuminate\Support\Str;
 use Psr\SimpleCache\InvalidArgumentException;
 
@@ -18,28 +19,27 @@ class GameService
      */
     private GameRepository $gameRepository;
     /**
-     * @var StateRepository
+     * @var LocalStateStorage
      */
-    private StateRepository $stateRepository;
+    private LocalStateStorage $storage;
 
     /**
      * GameService constructor.
      * @param GameRepository $gameRepository
-     * @param StateRepository $stateRepository
+     * @param LocalStateStorage $storage
      */
-    public function __construct(GameRepository $gameRepository, StateRepository $stateRepository)
+    public function __construct(GameRepository $gameRepository, LocalStateStorage $storage)
     {
         $this->gameRepository = $gameRepository;
-        $this->stateRepository = $stateRepository;
+        $this->storage = $storage;
     }
-
 
     /**
      * @return Game
      */
     public function initGame(): Game
     {
-        $this->stateRepository->clearState(); // clear all last games
+        $this->storage->clearState(); // clear all last games
 
         $game = $this->gameRepository->setGame(
             Str::uuid()->toString(),
@@ -47,11 +47,10 @@ class GameService
             Game::STATUS_DRAW
         );
 
-        $this->stateRepository->saveStateGame($game);
+        $this->storage->saveStateGame($game);
 
         return $game;
     }
-
 
     /**
      * @param $id
@@ -59,7 +58,7 @@ class GameService
      */
     public function getGame($id): array
     {
-        if ($board = $this->stateRepository->getBoard($id)) {
+        if ($board = $this->storage->getBoard($id)) {
             $game = $this->gameRepository->setGame($id, $board, Game::STATUS_RUNNING);
 
             return [
@@ -79,10 +78,10 @@ class GameService
      */
     public function playerMove($id, $key): ?Game
     {
-        if ($board = $this->stateRepository->getBoard($id)) {
+        if ($board = $this->storage->getBoard($id)) {
             $board[$key] = Game::USER_PLAYER;
-            $this->stateRepository->setBoardState($id, $board);
-            $this->stateRepository->setCurrentPlayer(Game::USER_PLAYER);
+            $this->storage->setBoardState($id, $board);
+            $this->storage->setCurrentPlayer(Game::USER_PLAYER);
 
             return $this->gameRepository->setGame($id, $board, Game::STATUS_RUNNING);
         }
@@ -97,14 +96,14 @@ class GameService
      */
     public function pcMove($id): ?Game
     {
-        if ($board = $this->stateRepository->getBoard($id)) {
+        if ($board = $this->storage->getBoard($id)) {
             $freeOptions = $this->gameRepository->getFreeMove($board);
 
             if ($freeOptions) {
                 $stepRand = array_rand($freeOptions);
                 $board[$freeOptions[$stepRand]] = Game::PC_PLAYER;
-                $this->stateRepository->setBoardState($id, $board);
-                $this->stateRepository->setCurrentPlayer(Game::PC_PLAYER);
+                $this->storage->setBoardState($id, $board);
+                $this->storage->setCurrentPlayer(Game::PC_PLAYER);
 
                 return $this->gameRepository->setGame($id, $board, Game::STATUS_RUNNING);
             }
@@ -121,13 +120,13 @@ class GameService
      */
     public function winCheck($id): ?Game
     {
-        if ($board = $this->stateRepository->getBoard($id)) {
+        if ($board = $this->storage->getBoard($id)) {
             $winCheck = $this->gameRepository->checkWinStatus($board);
             $game = $this->gameRepository->setGame($id, $board, $winCheck['gameStatus']);
 
             if ($winCheck['win']) {
                 $this->gameRepository->saveGameToFile();
-                $this->stateRepository->clearState();
+                $this->storage->clearState();
             }
 
             return $game;

@@ -1,28 +1,40 @@
 <?php
 
 
-namespace App\Repositories\v1;
-
+namespace App\Storage;
 
 use App\Entity\Game;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
-use Psr\SimpleCache\InvalidArgumentException;
+use Psr\SimpleCache\{CacheInterface, InvalidArgumentException};
+use App\Interfaces\StateStorageInterface;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Class StateRepository
  * @package App\Repositories\v1
  */
-class StateRepository
+class LocalStateStorage implements StateStorageInterface
 {
+
+    /**
+     * @return Repository
+     */
+    public function getStore(): CacheInterface
+    {
+        return Cache::store('file');
+    }
+
     /**
      * @param Game $game
      */
     public function saveStateGame(Game $game): void
     {
         try {
-            Cache::store('file')->set('gameId', $game->getId());
+            $this->getStore()->set('gameId', $game->getId());
             $this->setBoardState($game->getId(), $game->getBoard());
         } catch (InvalidArgumentException $e) {
+            Log::critical($e->getMessage());
         }
     }
 
@@ -33,10 +45,11 @@ class StateRepository
     public function getBoard($id): array
     {
         try {
-            if ($data = Cache::store('file')->get('board-' . $id)) {
+            if ($data = $this->getStore()->get('board-' . $id)) {
                 return unserialize($data);
             }
         } catch (InvalidArgumentException $e) {
+            Log::critical($e->getMessage());
         }
 
         return [];
@@ -49,8 +62,9 @@ class StateRepository
     public function setBoardState($id, $board): void
     {
         try {
-            Cache::store('file')->set('board-' . $id, serialize($board));
+            $this->getStore()->set('board-' . $id, serialize($board));
         } catch (InvalidArgumentException $e) {
+            Log::critical($e->getMessage());
         }
     }
 
@@ -60,8 +74,9 @@ class StateRepository
     public function setCurrentPlayer($player): void
     {
         try {
-            Cache::store('file')->set('lastPlayer', $player);
+            $this->getStore()->set('lastPlayer', $player);
         } catch (InvalidArgumentException $e) {
+            Log::critical($e->getMessage());
         }
     }
 
@@ -71,7 +86,7 @@ class StateRepository
      */
     public function getCurrentPlayer(): string
     {
-        return Cache::store('file')->get('lastPlayer');
+        return $this->getStore()->get('lastPlayer');
     }
 
     /**
@@ -79,6 +94,6 @@ class StateRepository
      */
     public function clearState(): void
     {
-        Cache::store('file')->clear();
+        $this->getStore()->clear();
     }
 }

@@ -3,6 +3,8 @@
 namespace App\Repositories\v1;
 
 use App\Entity\Game;
+use App\Interfaces\StateStorageInterface;
+use App\Storage\LocalStateStorage;
 use Illuminate\Support\Facades\Storage;
 use Psr\SimpleCache\InvalidArgumentException;
 
@@ -19,17 +21,17 @@ class GameRepository
     private Game $game;
 
     /**
-     * @var StateRepository
+     * @var StateStorageInterface
      */
-    private StateRepository $stateRepository;
+    private StateStorageInterface $storage;
 
     /**
      * GameRepository constructor.
-     * @param StateRepository $stateRepository
+     * @param LocalStateStorage $storage
      */
-    public function __construct(StateRepository $stateRepository)
+    public function __construct(LocalStateStorage $storage)
     {
-        $this->stateRepository = $stateRepository;
+        $this->storage = $storage;
         $this->game = new Game();
     }
 
@@ -46,7 +48,6 @@ class GameRepository
             ->setBoard($board)
             ->setStatus($status);
     }
-
 
     public function saveGameToFile(): void
     {
@@ -80,9 +81,9 @@ class GameRepository
      */
     public function checkWinStatus($board): array
     {
-        $currentPlayer = $this->stateRepository->getCurrentPlayer();
+        $currentPlayer = $this->storage->getCurrentPlayer();
         $result = [$currentPlayer => []];
-        $winOptions = Game::getWinsOptions();
+        $winOptions = Game::getWinsStrategy();
 
         foreach ($board as $key => $b) {
             if ($b == $currentPlayer) {
